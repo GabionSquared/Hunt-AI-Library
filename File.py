@@ -3,6 +3,7 @@ from PIL import Image
 import os
 PATH = os.path.dirname(__file__)
 
+#returns percentage accuracy
 def Similarity(im1, im2, marginOfError = 4, debug = False):
     width1, height1 = im1.size
     width2, height2 = im2.size
@@ -86,6 +87,8 @@ def IdentifyName(im, debug = False):
 
             flag = True
 
+
+
     if(debug):
         print ("FINAL MARGIN: " + str(margin))
         print ("small: " + str(smallSimilarity))
@@ -98,26 +101,44 @@ def IdentifyName(im, debug = False):
         return "mid"
     else:
         return "lorg"
-  
+    
+def ScanInven(im, num):
+    if(num == -1):
+        offset_X = 66
+        offset_Y = 59
+    elif(num == 0):
+        offset_X = 375
+        offset_Y = 45
+    else:
+        offset_X = 685
+        offset_Y = 59
+    
+
+    InvenPanel = im.crop((offset_X, offset_Y, offset_X + 280, offset_Y + 555))
+    InvenPanel.save('panel.png')
+
+    sign  = InvenPanel.crop((8, 75, 8+72, 75+13))
+    sign2 = InvenPanel.crop((8, 151, 8+72, 151+13))
+
+    sign.save(str(num) + 'sign.png')
+    sign2.save(str(num) + 'sign2.png')
+
+    print("")
+    print(IdentifyName(sign, True))
+    print("")
+    print(IdentifyName(sign2, True))
+    print("")
+
+    #sign.show()
+    #sign2.show()
 
 #3 is wrong
 #2 is big, mid
-im = Image.open(PATH + '/Ref1.jpg')
+im = Image.open(PATH + '/Ref6.jpg')
 width, height = im.size
 
-offset_X = 375
-offset_Y = 45
+ScanInven(im, -1)
+ScanInven(im, 0)
+ScanInven(im, 1)
 
 #im.crop((left, top, right, bottom))
-InvenPanel = im.crop((offset_X, offset_Y, offset_X + 280, offset_Y + 555))
-#InvenPanel.save('panel.png')
-#InvenPanel.show()
-
-sign  = InvenPanel.crop((8, 75, 8+72, 75+13))
-sign2 = InvenPanel.crop((8, 151, 8+72, 151+13))
-
-print("")
-print(IdentifyName(sign, True))
-print("")
-print(IdentifyName(sign2, True))
-print("")
