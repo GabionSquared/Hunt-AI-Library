@@ -50,6 +50,56 @@ def Similarity(im1, im2, marginOfError = 4, debug = False):
     
     return ((pixelsSimilar/pixelsChecked)*100)
 
+def IdentifyName(im, debug = False):
+    small = Image.open(PATH + '/Lib/Small Sign.png')
+    mid = Image.open(PATH + '/Lib/Medium Sign.png')
+    large = Image.open(PATH + '/Lib/Large Sign.png')
+
+    smallSimilarity = 0
+    midSimilarity = 0
+    largeSimilarity = 0
+    margin = 100
+    flag = False
+
+    while(not flag):
+        
+        smallSimilarity = Similarity(im, small, margin) #, debug=debug
+        midSimilarity = Similarity(im, mid, margin)
+        largeSimilarity = Similarity(im, large, margin)
+
+        arr = [smallSimilarity, midSimilarity, largeSimilarity]
+        arr.sort()
+        first = arr[-1]
+        second = arr[-2]
+
+        if(first - 20 > second):
+            flag = True
+        else:
+            margin -= 4
+
+        if(margin <= 0):
+            margin = 4
+            print("(defaulting)")
+            smallSimilarity = Similarity(im, small, margin) #, debug=debug
+            midSimilarity = Similarity(im, mid, margin)
+            largeSimilarity = Similarity(im, large, margin)
+
+            flag = True
+
+    if(debug):
+        print ("FINAL MARGIN: " + str(margin))
+        print ("small: " + str(smallSimilarity))
+        print ("mid: " + str(midSimilarity))
+        print ("large: " + str(largeSimilarity))
+
+    if((smallSimilarity > midSimilarity) and (smallSimilarity > largeSimilarity)):
+        return "small"
+    elif(midSimilarity > largeSimilarity):
+        return "mid"
+    else:
+        return "lorg"
+  
+
 #3 is wrong
 #2 is big, mid
 im = Image.open(PATH + '/Ref1.jpg')
@@ -66,10 +116,8 @@ InvenPanel = im.crop((offset_X, offset_Y, offset_X + 280, offset_Y + 555))
 sign  = InvenPanel.crop((8, 75, 8+72, 75+13))
 sign2 = InvenPanel.crop((8, 151, 8+72, 151+13))
 
-small = Image.open(PATH + '/Lib/Small Sign.png')
-mid = Image.open(PATH + '/Lib/Medium Sign.png')
-large = Image.open(PATH + '/Lib/Large Sign.png')
-
-print("small: " + str(Similarity(sign, small)))
-print("mid: " + str(Similarity(sign, mid)))
-print("large: " + str(Similarity(sign, large)))
+print("")
+print(IdentifyName(sign, True))
+print("")
+print(IdentifyName(sign2, True))
+print("")
