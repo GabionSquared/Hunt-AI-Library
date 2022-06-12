@@ -3,7 +3,7 @@ from PIL import Image
 import os
 PATH = os.path.dirname(__file__)
 
-def Similarity(im1, im2):
+def Similarity(im1, im2, marginOfError = 4, debug = False):
     width1, height1 = im1.size
     width2, height2 = im2.size
     pix1 = im1.load()
@@ -21,14 +21,33 @@ def Similarity(im1, im2):
     pixelsChecked = 0
     pixelsSimilar = 0
 
+    #centralises around 0. MoR = 10 -> lower = -5, upper = +5
+    lower = int((marginOfError/2)-marginOfError)
+    upper = abs(lower)-1
+
+    if(debug):
+        print("margin: " + str(marginOfError) + "\nlower: " + str(lower) + "\nupper: " + str(upper) )
+
     for x in range(0, widthSmaller):
         for y in range(0, HeightSmaller):
 
-            if(pix1[x,y] == pix2[x,y]):
-                pixelsSimilar += 1
+            for err in range(lower, upper):
+                pixList1 = list(pix1[x,y])
+
+                for i in range(0, len(pixList1)):
+                    pixList1[i] += err
+
+                pixTup1 = tuple(pixList1)
+
+                if(pixTup1 == pix2[x,y]):
+                    pixelsSimilar += 1
+                    break
 
             pixelsChecked += 1
 
+    if(debug):
+        print (str(pixelsSimilar) + " of " + str(pixelsChecked) + " (" + str((pixelsSimilar/pixelsChecked)*100) + "%)")
+    
     return ((pixelsSimilar/pixelsChecked)*100)
 
 #3 is wrong
