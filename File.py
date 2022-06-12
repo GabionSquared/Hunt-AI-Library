@@ -13,6 +13,13 @@ offset_Y = 45
 
 #im.crop((left, top, right, bottom))
 InvenPanel = im.crop((offset_X, offset_Y, offset_X + 280, offset_Y + 555))
-InvenPanel.save('panel.png')
+#InvenPanel.save('panel.png')
+#InvenPanel.show()
 
-InvenPanel.show()
+sign  = InvenPanel.crop((8, 75, 8+72, 75+13))
+sign2 = InvenPanel.crop((8, 151, 8+72, 151+13))
+
+sign.save('sign.png')
+sign2.save('sign2.png')
+sign.show()
+sign2.show()
