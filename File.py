@@ -1,13 +1,41 @@
+from this import s
 from PIL import Image
 from PIL import ImageFilter
 import os
 import shutil
 import random
 
-
-from pip import main
 PATH = os.path.dirname(__file__)
 BIN = "/Bin"
+
+CONSUMABLE_LIST = []
+TOOL_LIST = []
+TRAIT_LIST = []
+WEAPONS_LARGE_LIST = []
+WEAPONS_MEDIUM_LIST = []
+WEAPONS_SMALL_LIST = []
+
+
+arr = os.listdir(PATH + '/Lib/Consumables')
+for i in range(0, len(arr)):
+    CONSUMABLE_LIST.append(Image.open(PATH + '/Lib/Consumables/' + arr[i]))
+arr = os.listdir(PATH + '/Lib/Tools')
+for i in range(0, len(arr)):
+    TOOL_LIST.append(Image.open(PATH + '/Lib/Tools/' + arr[i]))
+arr = os.listdir(PATH + '/Lib/Traits')
+for i in range(0, len(arr)):
+    TRAIT_LIST.append(Image.open(PATH + '/Lib/Traits/' + arr[i]))
+arr = os.listdir(PATH + '/Lib/WeaponsLarge')
+for i in range(0, len(arr)):
+    WEAPONS_LARGE_LIST.append(Image.open(PATH + '/Lib/WeaponsLarge/' + arr[i]))
+arr = os.listdir(PATH + '/Lib/WeaponsMedium')
+for i in range(0, len(arr)):
+    WEAPONS_MEDIUM_LIST.append(Image.open(PATH + '/Lib/WeaponsMedium/' + arr[i]))
+arr = os.listdir(PATH + '/Lib/WeaponsSmall')
+for i in range(0, len(arr)):
+    WEAPONS_SMALL_LIST.append(Image.open(PATH + '/Lib/WeaponsSmall/' + arr[i]))
+
+
 
 #https://stackoverflow.com/a/34325723
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
@@ -79,7 +107,7 @@ def Similarity(im1, im2, marginOfError = 4, debug = False):
     
     return ((pixelsSimilar/pixelsChecked)*100)
 
-#returns "small" "mid" or "lorg", and creates the log
+#returns "small" "mid" or "large", and creates the log
 def IdentifySize(im, debug = False, debugname = "1"):
     small = Image.open(PATH + '/Lib/Small Sign.png')
     mid = Image.open(PATH + '/Lib/Medium Sign.png')
@@ -110,7 +138,7 @@ def IdentifySize(im, debug = False, debugname = "1"):
             return "mid"
         else:
             debugstash(im, large)
-            return "lorg"
+            return "large"
     
     margin = 100
     flag = False
@@ -164,6 +192,46 @@ def IdentifySize(im, debug = False, debugname = "1"):
         print ("large: " + str(largeSimilarity))
 
     return compare()
+
+def IdentifyWithinList(list, im):
+    similarityarr = []
+    flag = False
+    margin = 4
+    while(not flag):
+        similarityarr = []
+        for i in range(0, len(list)):
+            similarityarr.append(Similarity(list[i], im, margin))
+        #print(similarityarr)
+
+        max_index = similarityarr.index(max(similarityarr))
+        value = similarityarr[max_index]
+        del similarityarr[max_index]
+
+        second_max_index = similarityarr.index(max(similarityarr))
+        secondvalue = similarityarr[second_max_index]
+        confidence = value-secondvalue
+
+        if(confidence > 30):
+            flag = True
+        else:
+            margin += 1
+        if(margin == 10):
+            print("(defaulting)")
+            flag = True
+            similarityarr = []
+            for i in range(0, len(list)):
+                similarityarr.append(Similarity(list[i], im, margin))
+            #print(similarityarr)
+
+            max_index = similarityarr.index(max(similarityarr))
+            value = similarityarr[max_index]
+            del similarityarr[max_index]
+
+            second_max_index = similarityarr.index(max(similarityarr))
+            secondvalue = similarityarr[second_max_index]
+            confidence = value-secondvalue
+
+    print(list[max_index].filename.split('/')[3][:-4] + "\t\t(" + str(round(confidence, 3)) + "%)")
 
 #returns im resized by a factor of amount
 def Resize(im, amount):
@@ -234,7 +302,9 @@ def FindWeaponIm(size1, size2, panel):
     arr = [wep1, wep2]
     return arr
 
-def findtoolsandcons(panel):
+#returns a 2d jagged array of the tools and consumable images
+def findtoolsandcons(panel, QuickAndDirty = False, ImportedEncoder = "_"):
+    jaglist = [[],[]]
     emptyslot = Image.open(PATH + '/Lib/EmptySlot.png')
     emptyslot = Resize(emptyslot, 4).filter(ImageFilter.GaussianBlur(radius=1))
 
@@ -249,13 +319,19 @@ def findtoolsandcons(panel):
         encoder = random.randrange(0,1000)
         img = panel.crop((offset_X[i], tool_Y, offset_X[i] + spacing[i], tool_Y + offset_Y))
         img = Resize(img, 4).filter(ImageFilter.GaussianBlur(radius=1))
+
+        #this detects if the slot is empty
         similar = Similarity(emptyslot,img,5)
         #print(str(encoder) + " is empty:" + str(similar))
+        if(QuickAndDirty):
+            similar = 0
+            encoder = ImportedEncoder
         if(similar > 45):
             break
             img.save(PATH + BIN + "/"+'zEMPTYTOOL_' + str(encoder) +'.png')
         else:
             img.save(PATH + BIN + "/"+'ztool_' + str(encoder) +'.png')
+            jaglist[0].append(img)
 
     for i in range(0,4):
         encoder = random.randrange(0,1000)
@@ -263,13 +339,22 @@ def findtoolsandcons(panel):
         img = Resize(img, 4).filter(ImageFilter.GaussianBlur(radius=1))
         similar = Similarity(emptyslot,img,5)
         #print(str(encoder) + " is empty:" + str(similar))
+        if(QuickAndDirty):
+            similar = 0
+            encoder = ImportedEncoder
         if(similar > 50):
             break
             img.save(PATH + BIN + "/"+'zEMPTYCONS_' + str(encoder) +'.png')
         else:
             img.save(PATH + BIN + "/"+'zcons_' + str(encoder) +'.png')
+            jaglist[1].append(img)
 
-def findtraits(panel):
+    return jaglist
+
+#return a list of the trait images
+def findtraits(panel, QuickAndDirty = False, ImportedEncoder = "_"):
+    traitlist = []
+
     emptytrait = Image.open(PATH + '/Lib/EmptyTrait.png')
     emptytrait = Resize(emptytrait, 4)
 
@@ -288,20 +373,24 @@ def findtraits(panel):
         for y in range(0,5):
             trait = panel.crop((usingleft, top, usingleft + width, top + height))
             trait = Resize(trait, 4)
+            encoder = random.randrange(0,1000)
             if(Similarity(emptytrait,trait) > 90):
                 break
-            encoder = random.randrange(0,1000)
+            if(QuickAndDirty):
+                encoder = ImportedEncoder
             trait.save(PATH + BIN + "/"+'ztrait' + str(encoder) +'.png')
+            traitlist.append(trait)
             usingleft += leftadder
 
         usingleft = left
         top += topadder
 
+    return traitlist
 
 def Process(im, num):
 
     InvenPanel = FindPanel(im, num)
-    #"""
+    
     signs = SignsFromPanel(InvenPanel, num)
 
     size1 = IdentifySize(signs[0], True, debugname="top")
@@ -313,10 +402,32 @@ def Process(im, num):
     weaponIms[0].save(PATH + BIN + "/"+'wep' + str(encoder) +'.png')
     encoder = random.randrange(0,1000)
     weaponIms[1].save(PATH + BIN + "/"+'wep' + str(encoder) +'.png')
-    #"""
-    findtoolsandcons(InvenPanel)
-    findtraits(InvenPanel)
+    
+    jaggedlist = findtoolsandcons(InvenPanel)
+    traitlist = findtraits(InvenPanel)
 
+    print("----------")
+
+    if(size1 == "small"):
+        IdentifyWithinList(WEAPONS_SMALL_LIST, weaponIms[0])
+    elif (size1 == "mid"):
+        IdentifyWithinList(WEAPONS_MEDIUM_LIST, weaponIms[0])
+    else:
+        IdentifyWithinList(WEAPONS_LARGE_LIST, weaponIms[0])
+
+    if(size2 == "small"):
+        IdentifyWithinList(WEAPONS_SMALL_LIST, weaponIms[1])
+    elif (size2 == "mid"):
+        IdentifyWithinList(WEAPONS_MEDIUM_LIST, weaponIms[1])
+    else:
+        IdentifyWithinList(WEAPONS_LARGE_LIST, weaponIms[1])
+
+    for i in range(0, len(jaggedlist[0])):
+        IdentifyWithinList(TOOL_LIST, jaggedlist[0][i])
+    for i in range(0, len(jaggedlist[1])):
+        IdentifyWithinList(CONSUMABLE_LIST, jaggedlist[1][i])
+    for i in range(0, len(traitlist)):
+        IdentifyWithinList(TRAIT_LIST, traitlist[i])
 
 
 """
@@ -341,24 +452,54 @@ os.mkdir(PATH + BIN, 0o666)
 
 
 #Process(im, -1)
-Process(im, 0)
+#Process(im, 0)
 #Process(im, 1)
 
 
-def Batch():
-    #for i in range(1,24):
-    #    im = Image.open(PATH + '/Refs/Ref'+ str(i) +'.jpg')
-    #    Process(im, 0)
-
-    for i in range (10,17):
+def BatchProcess():
+    for i in range(1,24):
         im = Image.open(PATH + '/Refs/Ref'+ str(i) +'.jpg')
-        Process(im, -1)
-        Process(im, 1)
+        Process(im, 0)
+#BatchProcess()
 
-#Batch()
+def collectNewImages():
+    singles = [1,2,3,4,5,7,8,9,17,18,19,20,21,22,23]
+    for i in range(len(singles)):
+        singles[i]-= 1
 
-def test():
-    small = Image.open(PATH + '/Lib/Small Sign.png')
-    for i in range(0,3):
-        gauss = small.filter(ImageFilter.GaussianBlur(radius=i))
-        gauss.save(PATH + '/' + str(i) + 'im.png')
+    allScreenshots = []
+    arr = os.listdir(PATH + '/Refs')
+    for i in range(0, len(arr)):
+        allScreenshots.append(Image.open(PATH + '/Refs/' + arr[i]))
+    print("ASS LENGTH: " + str(len(allScreenshots)) + "\n\n")
+
+    for i in range(len(allScreenshots)):
+        filename = allScreenshots[i].filename
+        filenumer = filename.split('/')[len(filename.split('/'))-1][3:-4]
+
+        #print(filename)
+        #print(int(filenumer) in singles)
+
+        for i2 in range(-1, 2):
+            if((i2 == -1 or i2 == 1) and int(filenumer) in singles):
+                print("skipping IM " + str(filenumer) + " SPOT " + str(i2))
+                continue
+            print("\n\n     THIS IS IM " + str(filenumer) + " SPOT " + str(i2))
+
+            encoder = str(random.randrange(0,1000)) + "_" + str(filenumer) +"_" + str(i2)
+            #encoder = random.randrange(0,1000)
+
+            InvenPanel = FindPanel(allScreenshots[i], i2)
+            signs = SignsFromPanel(InvenPanel, i2)
+            size1 = IdentifySize(signs[0], True, debugname="top")
+            size2 = IdentifySize(signs[1], True, debugname="bottom")
+            weaponIms = FindWeaponIm(size1, size2, InvenPanel)
+
+            
+            weaponIms[0].save(PATH + BIN + "/"+'wep' + str(encoder) +'.png')
+            weaponIms[1].save(PATH + BIN + "/"+'wep' + str(encoder) +'.png')
+
+            findtoolsandcons(InvenPanel, True, encoder)
+            findtraits(InvenPanel, True, encoder)
+
+collectNewImages()
